@@ -7,11 +7,13 @@ import pygame
 
 
 class Game:
-    LINES = None
-    COLUMNS = None
-    MIN = None
-    MAX = None
+    LINES = 4
+    COLUMNS = 4
+    MIN = 'O'
+    MAX = 'X'
     VAR = 2
+    ALGORITHM_TYPE = 2
+    GAME_TYPE = True
 
     def __init__(self, board=None, score_min=0, score_max=0):
         """ Initializes the Game class.
@@ -401,7 +403,7 @@ def read_algorithm():
 
         print("The answer must be 1 or 2.")
 
-    return algorithm_type
+    Game.ALGORITHM_TYPE = algorithm_type
 
 
 def read_symbol():
@@ -426,7 +428,7 @@ def read_difficulty():
     :return: difficulty code
     """
     while True:
-        difficulty = input("Choose the difficulty level (answer with 1, 2 or 3):\n "
+        difficulty = input("Choose the difficulty (answer with 1, 2 or 3):\n "
                            "1.Easy\n 2.Medium\n 3.Hard\n")
 
         if difficulty in ['1', '2', '3']:
@@ -473,12 +475,12 @@ def read_game_type():
 
         print("The answer must be 'yes' or 'no'.")
 
-    return game_type == 'yes'
+    Game.GAME_TYPE = game_type == 'yes'
 
 
 def find_relative_position(line, column, board):
     """ Checks whether the given position represents a horizontal line, a vertical line or a non-valid line.
-    
+
     :param line: line index
     :param column: column index
     :param board: current game board
@@ -590,14 +592,13 @@ def player_turn(state):
     return state
 
 
-def computer_turn(state, algorithm_type):
+def computer_turn(state):
     """ Executes the computer's move.
 
     :param state: current state
-    :param algorithm_type: code corresponding to the algorithm chosen by the player
     :return: the updated state
     """
-    if algorithm_type == '1':
+    if Game.ALGORITHM_TYPE == '1':
         state.game = min_max(state).next_state.game
     else:
         state.game = alpha_beta(-5000, 5000, state).next_state.game
@@ -624,14 +625,12 @@ def print_if_final(state):
     return True
 
 
-def run_algorithm(algorithm_type, state, player_moves, computer_moves, game_type, boxes, graphics):
+def run_algorithm(state, player_moves, computer_moves, boxes, graphics):
     """ Alternatively executes the player's and the computer's turns.
 
-    :param algorithm_type: code corresponding to the algorithm chosen by the player
     :param state: current state
     :param player_moves: how many moves the player had so far
     :param computer_moves: how many moves the computer had so far
-    :param game_type: whether the game is shown on the graphical interface or not
     :param boxes: the batch of boxes from the graphical interface
     :param graphics: constants specific to the graphical interface
     :return: the number of player moves, the number of computer moves
@@ -645,7 +644,7 @@ def run_algorithm(algorithm_type, state, player_moves, computer_moves, game_type
             print("Player's turn:")
             player_moves += 1
 
-            if game_type:
+            if Game.GAME_TYPE:
                 player_turn_graphic(state, boxes)
             else:
                 state = player_turn(state)
@@ -655,7 +654,7 @@ def run_algorithm(algorithm_type, state, player_moves, computer_moves, game_type
         else:
             print("Computer's turn:")
             computer_moves += 1
-            state = computer_turn(state, algorithm_type)
+            state = computer_turn(state)
 
         turn_end_time = int(round(time.time() * 1000))
         boxes = display_game_board(state.game.board, graphics)
@@ -737,26 +736,63 @@ def init_graphics(state):
     return boxes, graphics
 
 
+def display_menu():
+    """ Prints the game menu.
+
+    :return: None
+    """
+    print("\nWrite the number preceding a menu option for changing the default or starting the game.")
+    print("Menu:")
+    print("1. Choose the computer's algorithm")
+    print("2. Choose whether you would like to be the first player or the second one")
+    print("3. Choose game difficulty")
+    print("4. Choose the board size")
+    print("5. Choose whether you would like to play with or without the graphical interface")
+    print("6. Start game")
+    print("\nAfter the game has started, enter '-1' during your turn if you want to end the game early.\n")
+
+
+def setup_game():
+    """ Sets up the game.
+
+    :return: starting game state
+    """
+    max_depth = 2
+    while True:
+        option = input()
+
+        if option == '1':
+            read_algorithm()
+        elif option == '2':
+            read_symbol()
+        elif option == '3':
+            max_depth = read_difficulty()
+        elif option == '4':
+            read_lines_and_columns()
+        elif option == '5':
+            read_game_type()
+        elif option == '6':
+            return State(Game(), 'X', max_depth)
+        else:
+            print("The answer must be between 1 and 6.")
+
+        print("Pick another option from the menu. Press 6 to start the game.")
+
+
 def main():
     """ Main function. Reads necessary constants for the current game, starts the game and shows the final statistics.
 
     :return: None
     """
-    print("After the game has started, enter '-1' during your turn if you want to stop before finishing the game.\n")
-
-    algorithm_type = read_algorithm()
-    read_symbol()
-    max_depth = read_difficulty()
-    read_lines_and_columns()
-    game_type = read_game_type()
-    state = State(Game(), 'X', max_depth)
+    display_menu()
+    state = setup_game()
     boxes, graphics = init_graphics(state)
     player_moves = 0
     computer_moves = 0
 
     game_start_time = int(round(time.time() * 1000))
     player_moves, computer_moves = \
-        run_algorithm(algorithm_type, state, player_moves, computer_moves, game_type, boxes, graphics)
+        run_algorithm(state, player_moves, computer_moves, boxes, graphics)
     game_end_time = int(round(time.time() * 1000))
 
     print("\nTotal play time: " + str(game_end_time - game_start_time) + " milliseconds.\n")
